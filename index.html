@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Quiz: Slope & Point Questions</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 500px; margin: 40px auto; background: #fff; padding: 2em; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h1 { text-align: center; }
+        .question { margin-bottom: 1.5em; }
+        .navigation { display: flex; justify-content: space-between; margin-bottom: 1em; }
+        button { padding: 0.5em 1.5em; border: none; border-radius: 4px; background: #007bff; color: #fff; cursor: pointer; font-size: 1em; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .result { background: #e6ffe6; padding: 1em; border-radius: 6px; margin-top: 1em; }
+        .answer { color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Math Quiz</h1>
+        <form id="quiz-form">
+            <div class="question" id="question-text"></div>
+            <input type="text" id="answer-input" autocomplete="off" required />
+            <div class="navigation">
+                <button type="button" id="back-btn">Back</button>
+                <button type="button" id="next-btn">Next</button>
+                <button type="submit" id="submit-btn" style="display:none;">Submit</button>
+            </div>
+        </form>
+        <div id="result" class="result" style="display:none;"></div>
+    </div>
+    <script>
+        // Fixed set of slope and point questions
+        const questions = [
+            {
+                q: "What is the slope of the line passing through the points (2, 3) and (5, 9)?",
+                a: "2",
+                type: "text"
+            },
+            {
+                // Multiple choice: slope from a plot (y = -x)
+                q: "What is the slope of the line shown in the plot below?",
+                a: "-1",
+                type: "multiple",
+                choices: ["2", "-1", "1/2", "0"],
+                graph: "slope"
+            },
+            {
+                // Graph-based: y-intercept from a drawn line (y = x + 3)
+                q: "What is the y-intercept of the line shown in the graph below?",
+                a: "3",
+                type: "graph",
+                graph: "intercept"
+            },
+            {
+                q: "Find the equation of the line passing through (0, -2) with slope 4. Write in the form y=mx+b.",
+                a: "y=4x-2",
+                type: "text"
+            },
+            {
+                q: "What is the slope of the line passing through the points (1, 2) and (4, 8)?",
+                a: "2",
+                type: "text"
+            }
+        ];
+
+        let current = 0;
+        const userAnswers = Array(questions.length).fill("");
+
+        const questionText = document.getElementById('question-text');
+        const answerInput = document.getElementById('answer-input');
+        const backBtn = document.getElementById('back-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const submitBtn = document.getElementById('submit-btn');
+        const resultDiv = document.getElementById('result');
+        const form = document.getElementById('quiz-form');
+
+        function showQuestion(idx) {
+            const q = questions[idx];
+            // Clear previous content
+            questionText.innerHTML = '';
+            answerInput.style.display = 'none';
+            // Remove any old MC or canvas
+            const oldMC = document.getElementById('mc-choices');
+            if (oldMC) oldMC.remove();
+            const oldCanvas = document.getElementById('graph-canvas');
+            if (oldCanvas) oldCanvas.remove();
+
+            // Show question text
+            questionText.innerHTML = `Question ${idx + 1} of ${questions.length}: ${q.q}`;
+
+            if (q.type === 'text') {
+                answerInput.style.display = 'inline-block';
+                answerInput.value = userAnswers[idx] || '';
+                setTimeout(() => answerInput.focus(), 0);
+            } else if (q.type === 'multiple') {
+                // Multiple choice
+                // If graph is needed, draw it
+                if (q.graph === 'slope') {
+                    // Draw y = -x, from x=-5 to x=5, so it passes through (0,0) and y-axis
+                    const canvas = document.createElement('canvas');
+                    canvas.id = 'graph-canvas';
+                    canvas.width = 300;
+                    canvas.height = 200;
+                    canvas.style.display = 'block';
+                    canvas.style.margin = '1em auto';
+                    questionText.appendChild(canvas);
+                    const ctx = canvas.getContext('2d');
+                    // Axes
+                    ctx.strokeStyle = '#888';
+                    ctx.beginPath();
+                    ctx.moveTo(40, 160); ctx.lineTo(260, 160); // x-axis
+                    ctx.moveTo(150, 180); ctx.lineTo(150, 40); // y-axis
+                    ctx.stroke();
+                    // Line y = -x, x from -5 to 5
+                    ctx.strokeStyle = '#007bff';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    for (let x = -5; x <= 5; x += 0.05) {
+                        let y = -x;
+                        let px = 150 + x * 20;
+                        let py = 160 - y * 20;
+                        if (x === -5) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    }
+                    ctx.stroke();
+                    // Label axes
+                    ctx.fillStyle = '#000';
+                    ctx.font = '12px Arial';
+                    ctx.fillText('x', 255, 175);
+                    ctx.fillText('y', 135, 50);
+                    // Tick marks and labels
+                    for (let i = -5; i <= 5; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(150 + i * 20, 160);
+                        ctx.lineTo(150 + i * 20, 165);
+                        ctx.stroke();
+                        if (i !== 0) ctx.fillText(i, 145 + i * 20, 175);
+                    }
+                    for (let i = -5; i <= 5; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(150, 160 - i * 20);
+                        ctx.lineTo(145, 160 - i * 20);
+                        ctx.stroke();
+                        if (i !== 0) ctx.fillText(i, 130, 165 - i * 20);
+                    }
+                }
+                const mcDiv = document.createElement('div');
+                mcDiv.id = 'mc-choices';
+                q.choices.forEach((choice, i) => {
+                    const label = document.createElement('label');
+                    label.style.display = 'block';
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = 'mc';
+                    radio.value = choice;
+                    if (userAnswers[idx] === choice) radio.checked = true;
+                    radio.addEventListener('change', () => {
+                        userAnswers[idx] = choice;
+                    });
+                    label.appendChild(radio);
+                    label.appendChild(document.createTextNode(' ' + choice));
+                    mcDiv.appendChild(label);
+                });
+                questionText.appendChild(mcDiv);
+            } else if (q.type === 'graph') {
+                // Graph-based question
+                // If graph is needed, draw it
+                if (q.graph === 'intercept') {
+                    // Draw y = x + 3, so y-intercept is at (0,3) and matches the answer, visible for x in [-5,5]
+                    const canvas = document.createElement('canvas');
+                    canvas.id = 'graph-canvas';
+                    canvas.width = 300;
+                    canvas.height = 200;
+                    canvas.style.display = 'block';
+                    canvas.style.margin = '1em auto';
+                    questionText.appendChild(canvas);
+                    const ctx = canvas.getContext('2d');
+                    // Axes
+                    ctx.strokeStyle = '#888';
+                    ctx.beginPath();
+                    ctx.moveTo(40, 160); ctx.lineTo(260, 160); // x-axis
+                    ctx.moveTo(150, 180); ctx.lineTo(150, 40); // y-axis
+                    ctx.stroke();
+                    // Line y = x + 3, x from -5 to 5
+                    ctx.strokeStyle = '#007bff';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    for (let x = -5; x <= 5; x += 0.05) {
+                        let y = x + 3;
+                        let px = 150 + x * 20;
+                        let py = 160 - y * 20;
+                        if (x === -5) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    }
+                    ctx.stroke();
+                    // Label axes
+                    ctx.fillStyle = '#000';
+                    ctx.font = '12px Arial';
+                    ctx.fillText('x', 255, 175);
+                    ctx.fillText('y', 135, 50);
+                    // Tick marks and labels
+                    for (let i = -5; i <= 5; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(150 + i * 20, 160);
+                        ctx.lineTo(150 + i * 20, 165);
+                        ctx.stroke();
+                        if (i !== 0) ctx.fillText(i, 145 + i * 20, 175);
+                    }
+                    for (let i = -5; i <= 5; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(150, 160 - i * 20);
+                        ctx.lineTo(145, 160 - i * 20);
+                        ctx.stroke();
+                        if (i !== 0) ctx.fillText(i, 130, 165 - i * 20);
+                    }
+                }
+                answerInput.style.display = 'inline-block';
+                answerInput.value = userAnswers[idx] || '';
+                setTimeout(() => answerInput.focus(), 0);
+            }
+
+            backBtn.disabled = idx === 0;
+            nextBtn.style.display = idx === questions.length - 1 ? 'none' : 'inline-block';
+            submitBtn.style.display = idx === questions.length - 1 ? 'inline-block' : 'none';
+        }
+
+        backBtn.addEventListener('click', () => {
+            const q = questions[current];
+            if (q.type === 'text' || q.type === 'graph') {
+                userAnswers[current] = answerInput.value;
+            }
+            if (current > 0) {
+                current--;
+                showQuestion(current);
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            const q = questions[current];
+            if (q.type === 'text' || q.type === 'graph') {
+                userAnswers[current] = answerInput.value;
+            }
+            if (current < questions.length - 1) {
+                current++;
+                showQuestion(current);
+            }
+        });
+
+
+        // Helper to evaluate numeric answers (accepts fractions, decimals, integers)
+        function parseNumericAnswer(ans) {
+            ans = ans.replace(/\s+/g, '');
+            if (/^[-+]?\d+(\.\d+)?$/.test(ans)) {
+                return parseFloat(ans);
+            }
+            // Fraction support
+            if (/^[-+]?\d+\/-?\d+$/.test(ans)) {
+                const [num, denom] = ans.split('/').map(Number);
+                if (denom !== 0) return num / denom;
+            }
+            return null;
+        }
+
+        // Helper to compare answers
+        function isEquivalent(user, correct) {
+            // For equations, compare as strings (case-insensitive, remove spaces)
+            if (/=/.test(correct)) {
+                return user.replace(/\s+/g, '').toLowerCase() === correct.replace(/\s+/g, '').toLowerCase();
+            }
+            // For numbers, allow equivalent fractions/decimals/integers
+            const userVal = parseNumericAnswer(user);
+            const correctVal = parseNumericAnswer(correct);
+            if (userVal !== null && correctVal !== null) {
+                return Math.abs(userVal - correctVal) < 1e-6;
+            }
+            // fallback to string compare
+            return user.trim().toLowerCase() === correct.trim().toLowerCase();
+        }
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const q = questions[current];
+            if (q.type === 'text' || q.type === 'graph') {
+                userAnswers[current] = answerInput.value;
+            }
+            let correct = 0;
+            let output = '<h2>Results</h2>';
+            output += '<ol>';
+            questions.forEach((q, i) => {
+                let user = userAnswers[i] ? userAnswers[i].trim() : '';
+                let correctAns = q.a;
+                let isCorrect = false;
+                if (q.type === 'multiple') {
+                    isCorrect = user === correctAns;
+                } else {
+                    isCorrect = isEquivalent(user, correctAns);
+                }
+                if (isCorrect) correct++;
+                output += `<li>${q.q}<br> Your answer: <span class=\"answer\">${user || '(blank)'}</span><br> Correct answer: <span class=\"answer\">${correctAns}</span> <b>${isCorrect ? '✔️' : '❌'}</b></li><br>`;
+            });
+            output += '</ol>';
+            const percent = Math.round((correct / questions.length) * 100);
+            let letter = '';
+            if (percent >= 90) letter = 'A';
+            else if (percent >= 80) letter = 'B';
+            else if (percent >= 70) letter = 'C';
+            else if (percent >= 60) letter = 'D';
+            else letter = 'F';
+            output += `<h3>Your score: ${correct} / ${questions.length} (${percent}%)<br>Letter grade: <span style="color:#007bff">${letter}</span></h3>`;
+            resultDiv.innerHTML = output;
+            resultDiv.style.display = 'block';
+            form.style.display = 'none';
+        });
+
+        // Enter key navigation
+        answerInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const q = questions[current];
+                if (q.type === 'text' || q.type === 'graph') {
+                    userAnswers[current] = answerInput.value;
+                }
+                if (current < questions.length - 1) {
+                    current++;
+                    showQuestion(current);
+                } else if (current === questions.length - 1) {
+                    form.requestSubmit();
+                }
+            }
+        });
+
+        // Initialize
+        showQuestion(current);
+    </script>
+</body>
+</html>
